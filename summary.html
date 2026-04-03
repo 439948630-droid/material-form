@@ -1,0 +1,590 @@
+<summary.html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>物料申请汇总 · 采购查看</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f5f6fa;font-family:"PingFang SC","Microsoft YaHei",sans-serif;color:#333;min-height:100vh}
+.page{max-width:1100px;margin:0 auto;padding:28px 14px 70px}
+.page-hd{background:#fff;border-radius:14px;padding:22px 28px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:4px solid #38a169}
+.page-hd h1{font-size:20px;font-weight:700;color:#1a1a2e}
+.page-hd .sub{font-size:12px;color:#bbb;margin-top:3px}
+/* 统计卡片 */
+.stats{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:18px}
+.sc{background:#fff;border-radius:12px;padding:14px 12px;box-shadow:0 1px 8px rgba(0,0,0,.07);text-align:center}
+.sc .n{font-size:26px;font-weight:800}.sc .l{font-size:11px;color:#aaa;margin-top:4px}
+.n-blue{color:#4e7af0}.n-orange{color:#e07b39}.n-green{color:#38a169}.n-gray{color:#888}.n-red{color:#e53e3e}
+/* 工具栏 */
+.toolbar{background:#fff;border-radius:12px;padding:14px 18px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:16px}
+.toolbar-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toolbar-row + .toolbar-row{margin-top:10px}
+.toolbar label{font-size:12px;color:#aaa;margin-right:4px;white-space:nowrap}
+.toolbar select,.toolbar input[type=date],.toolbar input[type=text]{
+  height:36px;border:1.5px solid #e8e8e8;border-radius:8px;
+  padding:0 10px;font-size:13px;color:#333;outline:none;background:#fafafa;
+}
+.toolbar select:focus,.toolbar input:focus{border-color:#4e7af0}
+.toolbar input[type=date]{min-width:130px}
+.toolbar .date-sep{font-size:13px;color:#bbb;padding:0 2px}
+.btn-group{display:flex;gap:8px;margin-left:auto}
+.btn{height:36px;padding:0 16px;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn-refresh{background:#f5f8ff;color:#4e7af0;border:1.5px solid #c0d0ff}
+.btn-refresh:hover{background:#eef2ff}
+.btn-export{background:#38a169;color:#fff}
+.btn-export:hover{background:#2e8a5c}
+.btn-export:disabled{opacity:.45;cursor:not-allowed}
+.btn-clear{background:#fff;color:#e53e3e;border:1.5px solid #fac8c8}
+.btn-clear:hover{background:#fff5f5}
+.btn-reset{background:#fff;color:#888;border:1.5px solid #ddd;font-size:12px;padding:0 12px}
+.btn-reset:hover{background:#f5f5f5}
+/* 勾选工具栏 */
+.sel-bar{background:#eef3ff;border:1.5px solid #c0d0ff;border-radius:10px;padding:9px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;font-size:13px;color:#4e7af0;display:none}
+.sel-bar.show{display:flex}
+.sel-bar b{font-weight:700}
+/* 申请单 */
+.order-card{background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:12px;overflow:hidden}
+.order-hd{padding:12px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fafafa;border-bottom:1px solid #f0f0f0}
+.oid{font-size:11px;color:#ccc;font-family:monospace}
+.osup{font-size:14px;font-weight:700;color:#222;flex:1}
+.otime{font-size:12px;color:#ccc}
+.obuyer{font-size:12px;color:#888;background:#f0f0f0;padding:2px 8px;border-radius:12px;white-space:nowrap}
+/* 距离上次申请天数 */
+.days-badge{font-size:11px;font-weight:600;padding:2px 9px;border-radius:12px;white-space:nowrap}
+.days-fresh{background:#f0faf4;color:#38a169;border:1px solid #b2dfdb}
+.days-normal{background:#f5f8ff;color:#4e7af0;border:1px solid #c0d0ff}
+.days-warn{background:#fff8e6;color:#d97706;border:1px solid #fcd34d}
+.days-new{background:#f0f0f0;color:#aaa;border:1px solid #e0e0e0}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px}
+.tag-reg{background:#eef3ff;color:#4e7af0}.tag-acc{background:#fff6f0;color:#e07b39}
+.items-wrap{padding:2px 0}
+.item-row{display:flex;align-items:center;padding:8px 18px;gap:10px;border-bottom:1px solid #f8f8f8}
+.item-row:last-child{border-bottom:none}
+.icode{font-size:12px;font-weight:700;color:#4e7af0;min-width:72px}
+.icode.acc{color:#e07b39}
+.iname{font-size:13px;color:#555;flex:1}
+.icat{font-size:11px;color:#ccc;min-width:80px}
+.iqty{font-size:14px;font-weight:800;color:#222;min-width:55px;text-align:right}
+.iqty span{font-size:11px;color:#aaa;font-weight:400;margin-left:2px}
+.order-rmk{padding:6px 18px 12px;font-size:12px;color:#bbb}
+.order-rmk em{color:#888;font-style:normal}
+.empty{text-align:center;padding:80px 20px;color:#ccc}
+.empty .ico{font-size:48px;margin-bottom:12px}
+/* 状态徽章 - 三态 */
+.status-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px;cursor:pointer;border:none;white-space:nowrap;position:relative}
+.status-todo{background:#fff8e6;color:#d97706;border:1.5px solid #fcd34d}
+.status-todo:hover{background:#fef3c7}
+.status-done{background:#f0faf4;color:#38a169;border:1.5px solid #86efac}
+.status-done:hover{background:#dcfce7}
+.status-lack{background:#fff0f0;color:#e53e3e;border:1.5px solid #fca5a5}
+.status-lack:hover{background:#ffe4e4}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-todo{background:#d97706}.dot-done{background:#38a169}.dot-lack{background:#e53e3e}
+/* 状态切换弹出菜单 */
+.status-menu{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1.5px solid #e8e8e8;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:500;min-width:148px;display:none}
+.status-menu.open{display:block}
+.status-menu-item{padding:9px 14px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f5f5f5}
+.status-menu-item:last-child{border-bottom:none}
+.status-menu-item:hover{background:#f5f8ff}
+.status-menu-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+/* 勾选框 */
+.cb-wrap{display:flex;align-items:center;padding-right:4px}
+input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#4e7af0}
+.loading{text-align:center;padding:60px;color:#bbb;font-size:14px}
+@media(max-width:700px){
+  .stats{grid-template-columns:repeat(4,1fr)}
+  .icat{display:none}
+  .page-hd{padding:16px}
+  .toolbar-row{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="page-hd">
+    <div>
+      <h1>物料申请汇总</h1>
+      <div class="sub" id="lastRefresh">采购查看端 · 多设备实时同步</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="sc"><div class="n n-gray"  id="sTotal">—</div><div class="l">总申请单</div></div>
+    <div class="sc"><div class="n n-blue"  id="sReg">—</div><div class="l">常规女装</div></div>
+    <div class="sc"><div class="n n-orange"id="sAcc">—</div><div class="l">ACC</div></div>
+    <div class="sc"><div class="n n-green" id="sItems">—</div><div class="l">合计物料行</div></div>
+    <div class="sc"><div class="n" style="color:#d97706" id="sTodo">—</div><div class="l">⏳ 待办</div></div>
+    <div class="sc"><div class="n n-red"   id="sLack">—</div><div class="l">⚠️ 物料不足</div></div>
+    <div class="sc"><div class="n n-green" id="sDone">—</div><div class="l">✅ 已办</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-row">
+      <label>品类</label>
+      <select id="fType" onchange="load()">
+        <option value="">全部</option>
+        <option value="常规女装">常规女装</option>
+        <option value="ACC">ACC</option>
+      </select>
+
+      <label style="margin-left:8px">采购员</label>
+      <select id="fBuyer" onchange="load()">
+        <option value="">全部采购员</option>
+      </select>
+
+      <label style="margin-left:8px">供应商</label>
+      <input type="text" id="fSup" placeholder="输入关键字…" style="min-width:160px" oninput="debounce()"/>
+
+      <label style="margin-left:8px">处理状态</label>
+      <select id="fStatus" onchange="load()">
+        <option value="">全部状态</option>
+        <option value="待办">⏳ 待办</option>
+        <option value="物料不足待办">⚠️ 物料不足待办</option>
+        <option value="已办">✅ 已办</option>
+      </select>
+
+      <div class="btn-group">
+        <button class="btn btn-reset" onclick="resetFilters()">重置筛选</button>
+        <button class="btn btn-refresh" onclick="load()">刷新</button>
+        <button class="btn btn-export" id="exportBtn" onclick="exportCSV()">导出选中</button>
+        <button class="btn btn-clear" onclick="clearAll()">清空数据</button>
+      </div>
+    </div>
+    <div class="toolbar-row">
+      <label>提交时间</label>
+      <input type="date" id="fDateFrom" onchange="load()"/>
+      <span class="date-sep">至</span>
+      <input type="date" id="fDateTo" onchange="load()"/>
+    </div>
+  </div>
+
+  <!-- 勾选提示栏 -->
+  <div class="sel-bar" id="selBar">
+    已选 <b id="selCount">0</b> 条&nbsp;·&nbsp;
+    <span style="cursor:pointer;text-decoration:underline" onclick="selectAll()">全选当前页</span>
+    &nbsp;/&nbsp;
+    <span style="cursor:pointer;text-decoration:underline" onclick="clearSel()">取消全选</span>
+    &nbsp;&nbsp;
+    <button class="btn" style="height:30px;padding:0 14px;font-size:12px;background:#38a169;color:#fff;border-radius:8px" onclick="batchSetStatus('已办')">批量已办</button>
+    <button class="btn" style="height:30px;padding:0 14px;font-size:12px;background:#fff8e6;color:#d97706;border:1.5px solid #fcd34d;border-radius:8px" onclick="batchSetStatus('待办')">批量待办</button>
+  </div>
+
+  <div id="list"><div class="loading">加载中…</div></div>
+</div>
+
+<!-- 状态切换菜单（全局单例） -->
+<div class="status-menu" id="statusMenu">
+  <div class="status-menu-item" onclick="setStatus('待办')">
+    <span class="dot" style="background:#d97706"></span>待办
+  </div>
+  <div class="status-menu-item" onclick="setStatus('物料不足待办')">
+    <span class="dot" style="background:#e53e3e"></span>物料不足待办
+  </div>
+  <div class="status-menu-item" onclick="setStatus('已办')">
+    <span class="dot" style="background:#38a169"></span>已办
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://hbsmqaqhkgqzqgsnjjws.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhic21xYXFoa2dxenFnc25qandzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMjk0MzAsImV4cCI6MjA5MDYwNTQzMH0.F5KKboImQPpjpTMJ21viUvo9GvX09WfyalFFjpjsOMI';
+const SUPA_HDR = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+const ALL_BUYERS = ["温裕宁 Wynn Wen","王云迪 Ivan Wang","苏灏洋 Sergi Su","茹静宜 Jeany Ru","许晓斌 Mika Xu","赵萍君 Risa Zhao","钟碧莹 Biying Zhong","黄洁英 Yellow Huang","黄金凤 Olivia Huang"];
+
+let allData    = [];   // 当前渲染的列表
+let fullData   = [];   // 全量数据（用于计算上次申请天数）
+let selectedIds = new Set();
+let debTimer   = null;
+let menuTargetId = null;   // 当前打开状态菜单的订单 ID
+
+// 初始化采购员下拉
+ALL_BUYERS.forEach(b => {
+  const opt = document.createElement('option');
+  opt.value = b; opt.textContent = b;
+  document.getElementById('fBuyer').appendChild(opt);
+});
+
+// 点击其他地方关闭状态菜单
+document.addEventListener('click', e => {
+  const menu = document.getElementById('statusMenu');
+  if (!menu.contains(e.target) && !e.target.closest('.status-badge')) {
+    menu.classList.remove('open');
+    menuTargetId = null;
+  }
+});
+
+function debounce(){ clearTimeout(debTimer); debTimer = setTimeout(load, 350); }
+
+function resetFilters(){
+  ['fType','fBuyer','fSup','fStatus'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('fDateFrom').value = '';
+  document.getElementById('fDateTo').value   = '';
+  load();
+}
+
+// ══════════════════════════════════════════════
+//  状态切换：三态菜单
+// ══════════════════════════════════════════════
+function openStatusMenu(orderId, badgeEl) {
+  menuTargetId = orderId;
+  const menu = document.getElementById('statusMenu');
+  const rect  = badgeEl.getBoundingClientRect();
+  menu.style.left = rect.left + window.scrollX + 'px';
+  menu.style.top  = rect.bottom + window.scrollY + 4 + 'px';
+  menu.style.position = 'absolute';
+  document.body.appendChild(menu);
+  menu.classList.add('open');
+}
+
+async function setStatus(newStatus) {
+  const menu = document.getElementById('statusMenu');
+  menu.classList.remove('open');
+  if (!menuTargetId) return;
+  try {
+    const res = await fetch(
+      SUPA_URL + '/rest/v1/orders?id=eq.' + encodeURIComponent(menuTargetId),
+      {
+        method: 'PATCH',
+        headers: { ...SUPA_HDR, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ status: newStatus })
+      }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    load();
+  } catch(e) { alert('状态更新失败：' + e.message); }
+  menuTargetId = null;
+}
+
+// 批量设置状态
+async function batchSetStatus(newStatus) {
+  if (selectedIds.size === 0) { alert('请先勾选要操作的申请单'); return; }
+  const ids = [...selectedIds];
+  const label = newStatus === '已办' ? '已办' : '待办';
+  if (!confirm(`确定将选中的 ${ids.length} 条申请标记为"${label}"？`)) return;
+  let failCount = 0;
+  for (const id of ids) {
+    try {
+      const res = await fetch(
+        SUPA_URL + '/rest/v1/orders?id=eq.' + encodeURIComponent(id),
+        {
+          method: 'PATCH',
+          headers: { ...SUPA_HDR, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ status: newStatus })
+        }
+      );
+      if (!res.ok) failCount++;
+    } catch(e) { failCount++; }
+  }
+  if (failCount > 0) alert(`操作完成，${ids.length - failCount} 条成功，${failCount} 条失败`);
+  load();
+}
+
+// ══════════════════════════════════════════════
+//  勾选管理
+// ══════════════════════════════════════════════
+function onCheck(id, checked) {
+  if (checked) selectedIds.add(id);
+  else         selectedIds.delete(id);
+  refreshSelBar();
+}
+
+function selectAll() {
+  allData.forEach(o => selectedIds.add(o.id));
+  // 同步 DOM 勾选框
+  document.querySelectorAll('.order-cb').forEach(cb => cb.checked = true);
+  refreshSelBar();
+}
+
+function clearSel() {
+  selectedIds.clear();
+  document.querySelectorAll('.order-cb').forEach(cb => cb.checked = false);
+  refreshSelBar();
+}
+
+function refreshSelBar() {
+  const bar   = document.getElementById('selBar');
+  const count = document.getElementById('selCount');
+  const btn   = document.getElementById('exportBtn');
+  count.textContent = selectedIds.size;
+  bar.classList.toggle('show', selectedIds.size > 0);
+  btn.disabled = selectedIds.size === 0;
+  btn.textContent = selectedIds.size > 0 ? `导出选中（${selectedIds.size}）` : '导出选中';
+}
+
+// ══════════════════════════════════════════════
+//  加载数据
+// ══════════════════════════════════════════════
+async function load(){
+  const typeF    = document.getElementById('fType').value;
+  const buyerF   = document.getElementById('fBuyer').value;
+  const supF     = document.getElementById('fSup').value.trim();
+  const dateFrom = document.getElementById('fDateFrom').value;
+  const dateTo   = document.getElementById('fDateTo').value;
+  const statusF  = document.getElementById('fStatus').value;
+
+  // 构建 PostgREST 过滤参数（筛选用）
+  const filtParams = new URLSearchParams({ select: '*', order: 'submit_time.desc' });
+  if (typeF)    filtParams.set('type',     'eq.' + typeF);
+  if (buyerF)   filtParams.set('buyer',    'eq.' + buyerF);
+  if (supF)     filtParams.set('supplier', 'ilike.*' + supF + '*');
+  if (statusF)  filtParams.set('status',   'eq.' + statusF);
+  if (dateFrom) filtParams.set('submit_time', 'gte.' + dateFrom);
+  if (dateTo) {
+    // 如果同时有 dateFrom 和 dateTo，PostgREST 不支持同字段两个过滤，
+    // 需要改用 range 参数，但 supabase REST 支持用 and= 语法
+    // 简化处理：拉全量在前端过滤日期范围
+  }
+
+  // 全量请求（用于统计卡片 & 计算上次申请天数）
+  const allParams = new URLSearchParams({ select: '*', order: 'submit_time.desc' });
+
+  document.getElementById('list').innerHTML = '<div class="loading">加载中…</div>';
+  try {
+    // 同时请求全量 + 筛选结果
+    // 注意：Supabase 默认最多返回 1000 行，加 Range 头突破限制
+    const commonHdrs = { ...SUPA_HDR, 'Range': '0-9999' };
+    const [filtRes, allRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/orders?' + filtParams.toString(), { headers: commonHdrs }),
+      fetch(SUPA_URL + '/rest/v1/orders?' + allParams.toString(),  { headers: commonHdrs })
+    ]);
+    if (!filtRes.ok) throw new Error('HTTP ' + filtRes.status);
+    if (!allRes.ok)  throw new Error('HTTP ' + allRes.status);
+
+    let filtData = await filtRes.json();
+    let allData_ = await allRes.json();
+
+    // 解析 items（Supabase 存的是 JSON 字符串）
+    const parseItems = arr => arr.map(o => ({
+      ...o,
+      items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || [])
+    }));
+    filtData = parseItems(filtData);
+    allData_ = parseItems(allData_);
+
+    // 前端日期范围过滤（处理 dateFrom + dateTo 同时存在的情况）
+    if (dateFrom || dateTo) {
+      filtData = filtData.filter(o => {
+        const d = o.submit_time ? o.submit_time.split(' ')[0].replace(/\//g,'-') : '';
+        if (dateFrom && d < dateFrom) return false;
+        if (dateTo   && d > dateTo)   return false;
+        return true;
+      });
+    }
+
+    allData  = filtData;
+    fullData = allData_;
+
+    // 统计卡片（基于全量）
+    document.getElementById('sTotal').textContent  = fullData.length;
+    document.getElementById('sReg').textContent    = fullData.filter(o => o.type === '常规女装').length;
+    document.getElementById('sAcc').textContent    = fullData.filter(o => o.type === 'ACC').length;
+    document.getElementById('sItems').textContent  = fullData.reduce((s,o) => s + (o.items||[]).length, 0);
+    document.getElementById('sTodo').textContent   = fullData.filter(o => (o.status||'待办') === '待办').length;
+    document.getElementById('sLack').textContent   = fullData.filter(o => o.status === '物料不足待办').length;
+    document.getElementById('sDone').textContent   = fullData.filter(o => o.status === '已办').length;
+    document.getElementById('lastRefresh').textContent = '最后刷新：' + new Date().toLocaleTimeString('zh-CN');
+
+    // 按商家维度计算"上次申请日期"映射（基于全量数据）
+    const supLastDate = {};
+    fullData.forEach(o => {
+      const sup  = o.supplier;
+      const date = o.submit_time ? o.submit_time.split(' ')[0].replace(/\//g,'-') : null;
+      if (!date) return;
+      if (!supLastDate[sup] || date > supLastDate[sup]) supLastDate[sup] = date;
+    });
+
+    // 清空勾选（刷新时重置）
+    selectedIds.clear();
+    refreshSelBar();
+
+    renderList(allData, supLastDate);
+  } catch(e) {
+    document.getElementById('list').innerHTML =
+      '<div class="empty"><div class="ico">⚠️</div><p>加载失败：' + e.message + '</p></div>';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  渲染列表
+// ══════════════════════════════════════════════
+function daysDiff(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  d.setHours(0,0,0,0);
+  return Math.round((today - d) / 86400000);
+}
+
+function daysBadge(days) {
+  if (days === null) return '<span class="days-badge days-new">首次申请</span>';
+  if (days === 0)    return '<span class="days-badge days-fresh">今日申请</span>';
+  if (days <= 7)     return `<span class="days-badge days-fresh">距上次${days}天</span>`;
+  if (days <= 30)    return `<span class="days-badge days-normal">距上次${days}天</span>`;
+  return `<span class="days-badge days-warn">距上次${days}天</span>`;
+}
+
+function statusBadgeHtml(o) {
+  const st = o.status || '待办';
+  let cls = 'status-todo', dotCls = 'dot-todo';
+  if (st === '已办')        { cls = 'status-done'; dotCls = 'dot-done'; }
+  if (st === '物料不足待办') { cls = 'status-lack'; dotCls = 'dot-lack'; }
+  return `<button class="status-badge ${cls}" onclick="openStatusMenu('${o.id}',this)" title="点击切换状态">
+    <span class="status-dot ${dotCls}"></span>${st} ▾
+  </button>`;
+}
+
+function renderList(list, supLastDate) {
+  const el = document.getElementById('list');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty"><div class="ico">📭</div><p>暂无申请记录（当前筛选条件下）</p></div>';
+    return;
+  }
+
+  // 计算每条记录"距上次申请天数"：
+  // 对于同一供应商的最新一条，显示"今日"；对其他条，找它之前最近一条的日期
+  // 简化处理：按 submit_time 排序后，取当前记录的上一条同供应商记录
+  const sorted = [...list].sort((a,b) => (b.submit_time||'').localeCompare(a.submit_time||''));
+  // 每个供应商的申请时间列表（全量，用于计算间隔）
+  const supAllDates = {};
+  fullData.forEach(o => {
+    const sup  = o.supplier;
+    const date = o.submit_time ? o.submit_time.split(' ')[0].replace(/\//g,'-') : null;
+    if (!date) return;
+    if (!supAllDates[sup]) supAllDates[sup] = [];
+    supAllDates[sup].push(date);
+  });
+  // 每个供应商排序
+  Object.keys(supAllDates).forEach(s => {
+    supAllDates[s].sort((a,b) => b.localeCompare(a));  // 降序
+  });
+
+  el.innerHTML = list.map(o => {
+    const isAcc = o.type === 'ACC';
+    const checked = selectedIds.has(o.id) ? 'checked' : '';
+
+    // 计算该申请单"距上次申请天数"：找同供应商在本单提交时间之前的最近一条
+    const dates = supAllDates[o.supplier] || [];
+    const thisDate = o.submit_time ? o.submit_time.split(' ')[0].replace(/\//g,'-') : null;
+    // 找比本单提交时间更早的日期（dates 已降序排列）
+    let prevDate = null;
+    if (thisDate) {
+      for (const d of dates) {
+        if (d < thisDate) { prevDate = d; break; }
+      }
+    }
+    // 若同天有多条，prevDate 可能等于 thisDate，继续往前找
+    let days;
+    if (!prevDate) {
+      // 无更早记录 → 首次申请
+      days = null;
+    } else {
+      days = daysDiff(prevDate);
+      // days 表示"距今 prevDate 的天数"，但我们要的是"thisDate 距 prevDate 的天数"
+      const t = new Date(thisDate), p = new Date(prevDate);
+      t.setHours(0,0,0,0); p.setHours(0,0,0,0);
+      days = Math.round((t - p) / 86400000);
+    }
+
+    const itemsHtml = (o.items||[]).map(it => `
+      <div class="item-row">
+        <span class="icode${isAcc?' acc':''}">${it.code}</span>
+        <span class="iname">${it.name||''}</span>
+        <span class="icat">${it.category||''}</span>
+        <span class="iqty">${it.qty}<span>件</span></span>
+      </div>`).join('');
+
+    const rmk = o.remark
+      ? `<div class="order-rmk">备注：<em>${o.remark}</em></div>` : '';
+    const buyerBadge = o.buyer
+      ? `<span class="obuyer">${o.buyer}</span>` : '';
+
+    return `<div class="order-card">
+      <div class="order-hd">
+        <div class="cb-wrap">
+          <input type="checkbox" class="order-cb" ${checked}
+            onchange="onCheck('${o.id}',this.checked)">
+        </div>
+        <span class="tag ${isAcc?'tag-acc':'tag-reg'}">${o.type}</span>
+        <span class="osup">${o.supplier}</span>
+        ${buyerBadge}
+        ${daysBadge(days)}
+        ${statusBadgeHtml(o)}
+        <span class="oid">${o.id}</span>
+        <span class="otime">${o.submit_time||''}</span>
+      </div>
+      <div class="items-wrap">${itemsHtml}</div>${rmk}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  导出：仅导出勾选项（前端生成 .xlsx）
+// ══════════════════════════════════════════════
+function exportCSV() {
+  if (selectedIds.size === 0) { alert('请先勾选要导出的申请单'); return; }
+  const ids = [...selectedIds];
+  const selected = allData.filter(o => ids.includes(o.id));
+
+  // 展开 items 生成行数据
+  const rows = [];
+  selected.forEach(o => {
+    (o.items || []).forEach(it => {
+      rows.push({
+        '申请编号': o.id,
+        '提交时间': o.submit_time || '',
+        '品类': o.type || '',
+        '供应商': o.supplier || '',
+        '采购员': o.buyer || '',
+        '状态': o.status || '待办',
+        '物料代码': it.code || '',
+        '物料名称': it.name || '',
+        '类别': it.category || '',
+        '申请数量': it.qty || 0,
+        '备注': o.remark || ''
+      });
+    });
+  });
+
+  if (typeof XLSX === 'undefined') {
+    alert('正在加载导出组件，请稍后再试');
+    return;
+  }
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '物料申请');
+  const dateStr = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
+  XLSX.writeFile(wb, `物料申请_${dateStr}.xlsx`);
+}
+
+// ══════════════════════════════════════════════
+//  清空数据
+// ══════════════════════════════════════════════
+async function clearAll() {
+  if (!confirm('确定清空所有申请记录？不可撤销！')) return;
+  try {
+    // Supabase 要求至少一个过滤条件才允许 DELETE，用 id not null 匹配全部
+    const res = await fetch(
+      SUPA_URL + '/rest/v1/orders?id=not.is.null',
+      { method: 'DELETE', headers: { ...SUPA_HDR, 'Prefer': 'return=minimal' } }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    alert('清空完成');
+    load();
+  } catch(e) {
+    alert('操作失败：' + e.message);
+  }
+}
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
