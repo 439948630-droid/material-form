@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>物料申请收集表单 - 二维码</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #f0f2f5;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    padding: 20px;
+  }
+  .card {
+    background: #ffffff;
+    border-radius: 20px;
+    width: 360px;
+    padding: 40px 36px 36px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    text-align: center;
+  }
+  .card-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .card-subtitle {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 28px;
+  }
+  .qr-wrapper {
+    background: #f7f8fa;
+    border-radius: 14px;
+    padding: 20px;
+    display: inline-block;
+    margin-bottom: 24px;
+  }
+  .qr-wrapper img {
+    width: 220px;
+    height: 220px;
+    display: block;
+  }
+  .url-box {
+    background: #f7f8fa;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #555;
+    word-break: break-all;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  .hint {
+    font-size: 13px;
+    color: #999;
+    line-height: 2;
+  }
+  .hint strong {
+    display: block;
+    color: #666;
+  }
+  .print-btn {
+    margin-top: 24px;
+    display: inline-block;
+    padding: 9px 28px;
+    background: #1677ff;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    letter-spacing: 0.5px;
+  }
+  .print-btn:hover { background: #0e5fcc; }
+  @media print {
+    body { background: #fff; }
+    .print-btn { display: none; }
+    .card { box-shadow: none; }
+  }
+  .powered-by {
+    position: fixed;
+    top: 14px;
+    right: 18px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    background: rgba(255,255,255,0.85);
+    border-radius: 8px;
+    padding: 4px 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    font-size: 12px;
+    color: #666;
+  }
+  .powered-by img { width: 20px; height: 20px; vertical-align: middle; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<div class="powered-by">
+  <img src="https://backend-pro.oss-cn-hangzhou.aliyuncs.com/CN/Supply_Copilot/sc_avatar.png">
+  <span>Powered by 小思 - Mayfair Copilot - Mayfair 全能助手</span>
+</div>
+
+<div class="card">
+  <div class="card-title">物料申请收集表单</div>
+  <div class="card-subtitle">微信扫码直接填写，无需下载任何 App</div>
+
+  <div class="qr-wrapper">
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data=https%3A%2F%2Fapply.mf-scm.xyz" alt="二维码">
+  </div>
+
+  <div class="url-box">https://apply.mf-scm.xyz</div>
+
+  <div class="hint">
+    <strong>手机微信扫描上方二维码</strong>
+    或复制链接在浏览器打开
+  </div>
+
+  <button class="print-btn" onclick="window.print()">打印 / 保存图片</button>
+</div>
+
+</body>
+</html>
