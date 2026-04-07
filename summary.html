@@ -1,4 +1,4 @@
-<summary.html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -532,22 +532,17 @@ function exportCSV() {
   const ids = [...selectedIds];
   const selected = allData.filter(o => ids.includes(o.id));
 
-  // 展开 items 生成行数据
+  // 展开 items 生成行数据，列对齐系统批量上传模板
   const rows = [];
   selected.forEach(o => {
     (o.items || []).forEach(it => {
       rows.push({
-        '申请编号': o.id,
-        '提交时间': o.submit_time || '',
-        '品类': o.type || '',
-        '供应商': o.supplier || '',
-        '采购员': o.buyer || '',
-        '状态': o.status || '待办',
+        '仓库代码': 'ZQ1',
+        '领用类型': '采购领用',
         '物料代码': it.code || '',
-        '物料名称': it.name || '',
-        '类别': it.category || '',
-        '申请数量': it.qty || 0,
-        '备注': o.remark || ''
+        '货位': 'ZQ1-WL01-0101',
+        '数量': it.qty || 0,
+        '供应商名称': o.supplier || ''
       });
     });
   });
